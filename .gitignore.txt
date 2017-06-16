@@ -1,6 +1,6 @@
-*/.vs/
-*/Binaries/
-*/Intermediate/
-*/Saved/
+/UnrealCartpole/.vs/
+/UnrealCartpole/Binaries/
+/UnrealCartpole/Intermediate/
+/UnrealCartpole/Saved/
 
-*/UnrealCarpole.sln
+/UnrealCartpole/UnrealCarpole.sln/
