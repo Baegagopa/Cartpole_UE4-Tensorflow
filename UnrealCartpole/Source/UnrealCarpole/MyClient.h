@@ -2,7 +2,8 @@
 
 #pragma once
 
-#include "UObject/NoExportTypes.h"
+#include "GameFramework/Actor.h"
+#include "Json.h"
 #include "MyClient.generated.h"
 
 #define PORT_NUM	 8080
@@ -10,18 +11,23 @@
 #define SERVER_IP	"127.0.0.1"
 
 UCLASS()
-class UNREALCARPOLE_API UMyClient : public UObject
+class UNREALCARPOLE_API AMyClient : public AActor
 {
 	GENERATED_BODY()
 public:
-	UMyClient();
-	~UMyClient();
+	AMyClient();
+	~AMyClient();
+
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION()
 	void SendData();
 
 	UFUNCTION()
 	void RecvData();
+
+	int isDisconnected;
 
 	SOCKET sock;
 };

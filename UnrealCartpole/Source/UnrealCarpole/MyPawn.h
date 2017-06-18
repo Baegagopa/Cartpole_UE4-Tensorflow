@@ -3,7 +3,9 @@
 #pragma once
 
 #include "GameFramework/Pawn.h"
+#include "MyClient.h" 
 #include "MyPawn.generated.h"
+
 
 UCLASS()
 class UNREALCARPOLE_API AMyPawn : public APawn
@@ -47,4 +49,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, EditAnyWhere, Category = "InpudValue")
 	float MoveSpeed;
 	
+	UPROPERTY()
+	class AMyClient* TcpClient;
+
+	void StartTCP();
 };

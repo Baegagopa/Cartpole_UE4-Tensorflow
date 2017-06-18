@@ -58,7 +58,10 @@ AMyPawn::AMyPawn()
 void AMyPawn::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	GWorld->SpawnActor<AMyClient>();
+	//Struct_Cartpole a = new Struct_Cartpole();
+	//a.AngelChange = 1.25F;
+	//MY_LOG(Warning, TEXT("%f"), a.AngelChange);
 }
 
 // Called every frame
@@ -82,6 +85,28 @@ void AMyPawn::Tick( float DeltaTime )
 void AMyPawn::SetupPlayerInputComponent(class UInputComponent* inputComponent)
 {
 	Super::SetupPlayerInputComponent(inputComponent);
-
+	
+	inputComponent->BindAction("StartTCP", EInputEvent::IE_Pressed, this, &AMyPawn::StartTCP);
 }
 
+
+USTRUCT(BlueprintType)
+struct Struct_Cartpole
+{
+	GENERATED_USTRUCT_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cartpole")
+		float CartPos;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cartpole")
+		float Angle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cartpole")
+		float CartSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cartpole")
+		float AngelChange;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cartpole")
+		float Done;
+};

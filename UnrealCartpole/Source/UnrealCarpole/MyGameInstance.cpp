@@ -16,6 +16,5 @@ UMyGameInstance::UMyGameInstance()
 void UMyGameInstance::Init()
 {
 	Super::Init();
-	TcpClient = CreateDefaultSubobject<UMyClient>(TEXT("MyTcpClient"));
 	MY_LOG(Warning, TEXT("Game Instance Init!"));
 }

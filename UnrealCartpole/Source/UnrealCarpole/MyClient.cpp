@@ -4,8 +4,22 @@
 #include "MyClient.h"
 
 
-UMyClient::UMyClient()
+AMyClient::AMyClient()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	isDisconnected = -1;
+}
+
+AMyClient::~AMyClient()
+{
+	closesocket(sock);
+	WSACleanup();
+}
+
+void AMyClient::BeginPlay()
+{
+	Super::BeginPlay();
+
 	WSADATA wsadata;
 	WSAStartup(MAKEWORD(2, 2), &wsadata);//윈속 초기화           
 
@@ -14,32 +28,74 @@ UMyClient::UMyClient()
 	SOCKADDR_IN servaddr = { 0 };//소켓 주소
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_addr.s_addr = inet_addr(SERVER_IP);
+
 	servaddr.sin_port = htons(PORT_NUM);
-
-	int re = 0;
-	re = connect(sock, (struct sockaddr *)&servaddr, sizeof(servaddr));//연결 요청
-
+	isDisconnected = connect(sock, (struct sockaddr *)&servaddr, sizeof(servaddr));//연결 요청
 }
 
-UMyClient::~UMyClient()
+void AMyClient::SendData()
 {
-	closesocket(sock);//소켓 닫기
-	WSACleanup();//윈속 해제화
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetStringField("Name", "Super Sword");
+	JsonObject->SetNumberField("Damage", 15);
+	JsonObject->SetNumberField("Weight", 3);
+
+	FString OutputString;
+	TSharedRef< TJsonWriter<> > Writer = TJsonWriterFactory<>::Create(&OutputString);
+	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
+
+	FTCHARToUTF8 mmsg(*OutputString);
+	send(sock, mmsg.Get(), mmsg.Length(), 0); //송신
 }
 
-void UMyClient::SendData()
+void AMyClient::Tick(float DeltaTime)
 {
-	char msg[MAX_MSG_LEN] = "";
+	Super::Tick(DeltaTime); // Call parent class tick function  
 
-	gets_s(msg, MAX_MSG_LEN);
-	send(sock, msg, sizeof(msg), 0);//송신
-	if (strcmp(msg, "exit") == 0) { return; }
-	recv(sock, msg, sizeof(msg), 0);//수신
-	printf("수신:%s\n", msg);
-
+	if(!isDisconnected)
+		RecvData();
 }
 
-void UMyClient::RecvData()
+
+void AMyClient::RecvData()
 {
+	char msg[20];
+	
+	ZeroMemory(msg, 20);
+	recv(sock, msg, sizeof(msg), 0);
+
+	MY_LOG(Warning, UTF8_TO_TCHAR(msg));
+
+	FString OutputString = msg;
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	TSharedRef< TJsonReader<> > Reader = TJsonReaderFactory<>::Create(OutputString);
+	if (FJsonSerializer::Deserialize(Reader, JsonObject))
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, JsonObject->GetStringField(TEXT("Move")));
+	}
 
 }
+
+
+
+/*
+TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+JsonObject->SetStringField("Name", "Super Sword");
+JsonObject->SetNumberField("Damage", 15);
+JsonObject->SetNumberField("Weight", 3);
+
+FString OutputString;
+TSharedRef< TJsonWriter<> > Writer = TJsonWriterFactory<>::Create(&OutputString);
+FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
+
+TSharedPtr<FJsonObject> JsonObject2 = MakeShareable(new FJsonObject);
+TSharedRef< TJsonReader<> > Reader = TJsonReaderFactory<>::Create(OutputString);
+if (FJsonSerializer::Deserialize(Reader, JsonObject2))
+{
+//MY_LOG(Warning, TEXT(JsonObject->GetStringField(TEXT("Name"))));
+//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "debug msg");
+GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, JsonObject->GetStringField(TEXT("Name")));
+GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, JsonObject->GetStringField(TEXT("Damage")));
+GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, JsonObject->GetStringField(TEXT("Weight")));
+}
+*/

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "Engine/GameInstance.h"
-#include "MyClient.h" 
 #include "MyGameInstance.generated.h"
 
 /**
@@ -17,7 +16,6 @@ class UNREALCARPOLE_API UMyGameInstance : public UGameInstance
 public:
 	virtual void Init() override;
 
-	UPROPERTY()
-	class UMyClient* TcpClient;
 
+	
 };
