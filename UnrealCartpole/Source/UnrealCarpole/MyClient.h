@@ -10,6 +10,7 @@
 #define MAX_MSG_LEN	 256
 #define SERVER_IP	"127.0.0.1"
 
+class AMyPawn;
 UCLASS()
 class UNREALCARPOLE_API AMyClient : public AActor
 {
@@ -22,12 +23,16 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION()
-	void SendData();
+	void SendData(float CartPos, float Angle, float CartSpeed, float AngelChange, int Done);
 
 	UFUNCTION()
 	void RecvData();
 
-	int isDisconnected;
+	int isConnected;
 
 	SOCKET sock;
+
+	AMyPawn* myPawn;
 };
+
+

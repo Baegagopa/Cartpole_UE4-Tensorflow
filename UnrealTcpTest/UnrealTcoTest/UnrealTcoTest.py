@@ -33,27 +33,38 @@ class MySocket:
     def getStep(self):
         recvData = 0
         while not recvData:
-            recvData = self.cs.recv(100)
+            recvData = self.cs.recv(300)
 
         my_json = recvData.decode('utf8').replace("'", '"')
         #print(my_json);
         
         data = json.loads(my_json, object_hook=JsonObject)
-        print(data.Name)
-
         
-
-        #print("RecvData : ", a , " ", b, " ", c, " " , d, " ", e)
+        a = float(data.CartPos)
+        b = float(data.Angle)
+        c = float(data.CartSpeed)
+        d = float(data.AngelChange)
+        e = float(data.Done)
+        f = a+b
+        print("RecvData : ", a , "  ", b, "  ", c, "  " , d, "  ", f)
 
 
         #return np.array([a,b,c,d]),1,e
 
+a = "0.1"
+b = "0.2"
 
+a_t = float(a)
+b_t = float(b)
 
-s = MySocket()
+print(a_t , b_t)
+
+print(a_t + b_t)
+print(0.1 + 0.2)
+#s = MySocket()
 #s.getStep()
 #while True:
-s.sendingMsg('1')
+#s.sendingMsg('1')
 
 while True:
     a = 1

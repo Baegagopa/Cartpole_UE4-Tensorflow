@@ -6,7 +6,6 @@
 #include "MyClient.h" 
 #include "MyPawn.generated.h"
 
-
 UCLASS()
 class UNREALCARPOLE_API AMyPawn : public APawn
 {
@@ -25,8 +24,14 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
+	void ResetEpisode();
+	void StartActing();
+	void Acting(int dir);
+	void ActingHandling();
+
+public:
 	UPROPERTY(BlueprintReadOnly, VisibleAnyWhere, Category = "Root")
-	class USceneComponent* Root;
+	class USkeletalMeshComponent* Root;
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnyWhere, Category = "Cart")
 	class UStaticMeshComponent* Cart;
@@ -46,11 +51,36 @@ public:
 	UPROPERTY(BlueprintReadOnly, VisibleAnyWhere, Category = "Movement")
 	class UFloatingPawnMovement* Movement;
 
-	UPROPERTY(BlueprintReadOnly, EditAnyWhere, Category = "InpudValue")
-	float MoveSpeed;
-	
-	UPROPERTY()
-	class AMyClient* TcpClient;
+	UPROPERTY(BlueprintReadOnly, EditAnyWhere, Category = "InputValue")
+	float moveSpeed;
 
-	void StartTCP();
+	UPROPERTY(BlueprintReadOnly, EditAnyWhere, Category = "InputValue")
+	float failAngle;
+
+	UPROPERTY(BlueprintReadOnly, EditAnyWhere, Category = "InputValue")
+	float maxCnt;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "View Target")
+	ACameraActor* ViewTarget;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player Controller")
+	APlayerController* PlayerController;
+
+	float oldAngle;
+
+	int cntStep;
+
+	bool isStarted;
+	bool isTrigActing;
+	bool isTrigReset;
+
+	struct Struct_Cartpole CartpoleInfo;
+
+	FVector rootOrignPos;
+	FVector poleOrignPos;
+
+	AMyClient* myClient;
+	
+
 };
+

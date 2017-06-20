@@ -2,6 +2,7 @@
 
 #include "UnrealCarpole.h"
 #include "Runtime/Engine/Classes/PhysicsEngine/PhysicsConstraintComponent.h"
+#include "Runtime/Engine/Public/TimerManager.h"
 #include "MyPawn.h"
 
 
@@ -10,8 +11,9 @@ AMyPawn::AMyPawn()
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	AutoPossessPlayer = EAutoReceiveInput::Player0;
 
-	Root = CreateDefaultSubobject <USceneComponent>(TEXT("Root"));
+	Root = CreateDefaultSubobject <USkeletalMeshComponent>(TEXT("Root"));
 	RootComponent = Root;
 
 	Cart = CreateDefaultSubobject <UStaticMeshComponent>(TEXT("Cart"));
@@ -37,7 +39,7 @@ AMyPawn::AMyPawn()
 	Pole->SetStaticMesh(StaticMesh_Pole.Object);
 	Pole->SetWorldScale3D(FVector(0.1F, 0.1F, 1.4F));
 	Pole->SetRelativeLocation(FVector(-1.3F, 0.0F, 80.0F));
-	Pole->SetSimulatePhysics(true);
+	Pole->SetSimulatePhysics(false);
 	Pole->BodyInstance.bLockXRotation = true;
 	Pole->BodyInstance.bLockZRotation = true;
 
@@ -51,62 +53,154 @@ AMyPawn::AMyPawn()
 	CartPolePhysics->SetDisableCollision(true);
 	CartPolePhysics->SetConstrainedComponents(Sphere, NAME_None, Pole, NAME_None);
 
+	CartpoleInfo.CartPos = 0;
+	CartpoleInfo.Angle = 0;
+	CartpoleInfo.CartSpeed = 0;
+	CartpoleInfo.AngelChange = 0;
+	CartpoleInfo.Done = 0;
+	oldAngle = 0;
+	cntStep = 0;
+	isStarted = false;
+	isTrigActing = true;
+	isTrigReset = true;
 	Movement = CreateDefaultSubobject <UFloatingPawnMovement>(TEXT("Movement"));
+
 }
 
 // Called when the game starts or when spawned
 void AMyPawn::BeginPlay()
 {
 	Super::BeginPlay();
-	GWorld->SpawnActor<AMyClient>();
-	//Struct_Cartpole a = new Struct_Cartpole();
-	//a.AngelChange = 1.25F;
-	//MY_LOG(Warning, TEXT("%f"), a.AngelChange);
+
+	this->PlayerController = this->GetWorld()->GetFirstPlayerController();
+	if (this->PlayerController && this->ViewTarget)
+	{
+		this->PlayerController->SetViewTarget(this->ViewTarget);
+	}
+
+	myClient = GWorld->SpawnActor<AMyClient>();// tcp
+
+	rootOrignPos = Root->GetComponentLocation();
+	poleOrignPos = Pole->GetComponentLocation();
+
 }
 
 // Called every frame
 void AMyPawn::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
-
-	// 위치
-	//CP_LOG(Warning, *FString::SanitizeFloat(Root->GetComponentLocation().X));
-	AddMovementInput(GetActorForwardVector() * 0.8f, 0.1f, false);
-
-	// 이동 속도
-	//CP_LOG(Warning, *FString::SanitizeFloat(Root->GetComponentVelocity().X));
-	float height = Weight->GetComponentLocation().Z - Cart->GetComponentLocation().Z;
-	float x = Weight->GetComponentLocation().X - Cart->GetComponentLocation().X;
-	float angle = atan2f(x, height);
-	//CP_LOG(Warning, *FString::SanitizeFloat(angle));
+	if (!isTrigActing)
+	{
+		ActingHandling();
+	}
+	if (!isTrigReset)
+	{
+		ResetEpisode();
+	}
 }
 
 // Called to bind functionality to input
 void AMyPawn::SetupPlayerInputComponent(class UInputComponent* inputComponent)
 {
 	Super::SetupPlayerInputComponent(inputComponent);
-	
-	inputComponent->BindAction("StartTCP", EInputEvent::IE_Pressed, this, &AMyPawn::StartTCP);
 }
 
-
-USTRUCT(BlueprintType)
-struct Struct_Cartpole
+void AMyPawn::ResetEpisode()
 {
-	GENERATED_USTRUCT_BODY()
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cartpole")
-		float CartPos;
+	isTrigReset = true;//
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cartpole")
-		float Angle;
+	CartpoleInfo.CartPos = 0;
+	CartpoleInfo.Angle = 0;
+	CartpoleInfo.CartSpeed = 0;
+	CartpoleInfo.AngelChange = 0;
+	CartpoleInfo.Done = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cartpole")
-		float CartSpeed;
+	oldAngle = 0;
+	cntStep  = 0;
+	
+	Root->SetWorldLocation(rootOrignPos, false, nullptr, ETeleportType::TeleportPhysics);
+	Pole->SetWorldLocation(poleOrignPos, false, nullptr, ETeleportType::TeleportPhysics);
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cartpole")
-		float AngelChange;
+	Root->SetPhysicsLinearVelocity(FVector(0.0F, 0.0F, 0.0F));
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cartpole")
-		float Done;
-};
+	Pole->SetWorldRotation(FQuat(0.0F, 0.0F, 0.0F, 0.0F));
+	Pole->SetPhysicsAngularVelocity(FVector(0.0F, 0.0F, 0.0F));
+	Pole->SetPhysicsLinearVelocity(FVector(0.0F, 0.0F, 0.0F));
+
+	isStarted = false;
+	isTrigActing = true;
+	StartActing();
+}
+
+void AMyPawn::StartActing()
+{
+	Pole->SetSimulatePhysics(true);
+	//Acting(1);
+	ActingHandling();
+	isStarted = true;
+}
+
+void AMyPawn::Acting(int dir)
+{
+	if (isStarted)
+	{
+		if(dir == 0)
+			AddMovementInput(GetActorForwardVector(), moveSpeed, false);
+		else
+			AddMovementInput(GetActorForwardVector(), -moveSpeed, false);
+	}
+	isTrigActing = false;
+	
+}
+
+void AMyPawn::ActingHandling()
+{
+	isTrigActing = true;
+	float height = Weight->GetComponentLocation().Z - Cart->GetComponentLocation().Z;
+	float x = Weight->GetComponentLocation().X - Cart->GetComponentLocation().X;
+	float angle = atan2f(x, height);
+
+	CartpoleInfo.CartPos = Root->GetComponentLocation().X * 0.01F;
+	CartpoleInfo.Angle = angle;
+	CartpoleInfo.CartSpeed = Root->GetComponentVelocity().X * 0.01F;
+	CartpoleInfo.AngelChange = angle - oldAngle;
+	CartpoleInfo.Done = 0;
+	oldAngle = angle;
+
+
+	float degree = FMath::RadiansToDegrees(angle);
+	if (degree < failAngle && degree > -failAngle && cntStep < maxCnt)
+	{
+
+		MY_LOG(Warning, TEXT("%f , %f, %f, %f  T"),
+			CartpoleInfo.CartPos * 100.0F,
+			degree,
+			CartpoleInfo.CartSpeed *100.0F,
+			CartpoleInfo.AngelChange);
+
+		myClient->SendData(
+			CartpoleInfo.CartPos,
+			CartpoleInfo.Angle,
+			CartpoleInfo.CartSpeed,
+			CartpoleInfo.AngelChange,
+			CartpoleInfo.Done);
+	}
+	else
+	{
+		MY_LOG(Warning, TEXT("%f , %f, %f, %f  F"),
+			CartpoleInfo.CartPos*100.0F,
+			degree,
+			CartpoleInfo.CartSpeed * 100.0F,
+			CartpoleInfo.AngelChange);
+		CartpoleInfo.Done = 1;
+
+		myClient->SendData(
+			CartpoleInfo.CartPos,
+			CartpoleInfo.Angle,
+			CartpoleInfo.CartSpeed,
+			CartpoleInfo.AngelChange,
+			CartpoleInfo.Done);
+
+		isTrigReset = false;//ResetEpisode();
+	}
+}
